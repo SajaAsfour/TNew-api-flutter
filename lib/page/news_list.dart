@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:tnews/model/ArticleModel.dart';
+import 'package:tnews/services/NewServices.dart';
 
 class NewsList extends StatefulWidget {
   const NewsList({super.key});
@@ -12,42 +13,37 @@ class NewsList extends StatefulWidget {
 }
 
 class _NewsListState extends State<NewsList> {
+  String selectedCategory = 'general';
+  final List<String> categories = [
+    "business",
+    "entertainment",
+    "general",
+    "health",
+    "science",
+    "sports",
+    "technology"
+  ];
   List<Articlemodel> listArticle = [];
   bool isLoader = true;
   String errorMessage = "";
-
-  void getNews() async {
-    Dio dio = Dio();
+  final Newservices newservices = Newservices();
+  void fetchNews() async {
     try {
-      Response response = await dio.get(
-          "https://newsapi.org/v2/everything?q=tesla&from=2025-01-07&sortBy=publishedAt&apiKey=bcce431eca9545368c70c5c49f532b15");
-      Map<String, dynamic> data = response.data;
-      List<dynamic> articles = data["articles"];
-      List<Articlemodel> articlesList = [];
-      for (var item in articles) {
-        Articlemodel article = Articlemodel(
-          title: item["title"],
-          desc: item["description"],
-          image: item["urlToImage"],
-        );
-        articlesList.add(article);
-      }
+      List<Articlemodel> articles = await newservices.getNews(selectedCategory);
       setState(() {
-        listArticle = articlesList;
+        listArticle = articles;
         isLoader = false;
       });
-    } catch (err) {
-      setState(() {
-        isLoader = false;
-        errorMessage = "Server Error ....";
-      });
+    } catch (error) {
+      isLoader = false;
+      errorMessage = error.toString();
     }
   }
 
   @override
   void initState() {
     super.initState();
-    getNews();
+    fetchNews();
   }
 
   @override
@@ -61,6 +57,20 @@ class _NewsListState extends State<NewsList> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          DropdownButton(
+            iconEnabledColor: Colors.teal,
+            dropdownColor: Colors.teal[100],
+              items: categories.map((category) {
+                return DropdownMenuItem(value: category, child: Text(category));
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  selectedCategory = value;
+                  fetchNews();
+                }
+              })
+        ],
       ),
       body: isLoader
           ? Center(
